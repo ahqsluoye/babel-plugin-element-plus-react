@@ -6,7 +6,7 @@
   "author": "Parker",
   "license": "MIT",
   "scripts": {
-    "prepublishOnly": "npm run build",
+    "publish": "npm run build && npm publish --scope=@qsxy --access=public --registry https://registry.npmjs.org/",
     "build": " babel src --out-dir lib"
   },
   "repository": {

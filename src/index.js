@@ -2,63 +2,59 @@
  * @author Parker
  * 实现tree-shaking插件
  * 将 import { ElTransfer, ElInput } from '@qsxy/element-plus-react';
- * 转换成 import { ElTransfer } from '@qsxy/element-plus-react/dist/ElTransfer';
- *       import { ElInput } from '@qsxy/element-plus-react/dist/ElInput';
+ * 转换成 import { Transfer as ElTransfer } from '@qsxy/element-plus-react/dist/Transfer';
+ *       import { Input as ElInput } from '@qsxy/element-plus-react/dist/Input';
  */
 
 import fs from 'fs';
 import path from 'path';
 import Module from 'module';
 
-const projectPath = path.dirname(
-    Module._resolveFilename(
-        '@qsxy/element-plus-react',
-        Object.assign(new Module(), {
-            paths: Module._nodeModulePaths(process.cwd())
-        })
-    )
-);
+const projectPath = path.resolve(path.resolve(Module._nodeModulePaths(process.cwd())[0], '@qsxy'), 'element-plus-react');
 
-const methods = {
-    isEmpty: 'Util',
-    isNotEmpty: 'Util',
-    randomCode: 'Util',
-    getScrollWidth: 'Util',
-    generateTree: 'Util',
-    download: 'Util',
-    htmlInputAttrs: 'hooks',
-    htmlInputEvents: 'hooks',
-    htmlInputProps: 'hooks',
-    partitionHTMLProps: 'hooks',
-    partitionAnimationProps: 'hooks',
-    partitionPopperPropsUtils: 'hooks',
-    partitionTreePropsUtils: 'hooks',
-    useClassNames: 'hooks',
-    useControlled: 'hooks',
-    useClickOutside: 'hooks',
-    useComponentWillMount: 'hooks',
-    useUpdateEffect: 'hooks',
-    useDropdown: 'hooks',
-    useChildrenInstance: 'hooks'
-};
+const methods = {};
 
 function readFilePath(srcPath, result) {
-    const files = fs.readdirSync(srcPath);
-    files.forEach((item) => {
-        const stat = fs.statSync(srcPath + item);
-        if (stat.isDirectory()) {
-            //递归读取文件
-            readFilePath(srcPath + item + path.sep, result);
-        } else {
-            const fileName = path.basename(item, '.js');
-            if (item.endsWith('.js') && fileName !== 'index') {
-                const parent = path.resolve(srcPath);
-                Object.assign(result, {
-                    [fileName]: parent.substring(parent.indexOf(`dist${path.sep}`) + 4)
-                });
+    const indexPath = srcPath + 'dist' + path.sep + 'index.d.ts';
+    const index = fs.statSync(indexPath);
+    if (index.isFile) {
+        fs.readFile(indexPath, function (err, data) {
+            if (err) {
+                console.log(err);
+            } else {
+                let match;
+                const content = data.toString();
+                const regex = new RegExp(/export((\stype)*\s*\{*\s*)([a-zA-Z,\s]*)(\s*\}*)(\s*from\s*)["|'](.*?)["|']/, 'g');
+                while ((match = regex.exec(content)) !== null) {
+                    const comps = match[3];
+                    const from = match[6];
+                    // console.log(comps, from);
+                    if (comps && from) {
+                        comps.split(',').forEach((item) => {
+                            const component = item.trim();
+                            let local = component;
+                            let _import = component;
+                            if (local.includes(' as ')) {
+                                _import = _import.split(' as ')[0].trim();
+                                local = local.split(' as ')[1].trim();
+                            }
+                            if (local) {
+                                Object.assign(result, {
+                                    [local]: {
+                                        _import,
+                                        local,
+                                        fullImp: component,
+                                        dest: from.replace('./', '')
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+                // console.log(result);
             }
-        }
-    });
+        });
+    }
 }
 
 readFilePath(projectPath + path.sep, methods);
@@ -76,6 +72,10 @@ export default function ({ types: t }) {
                     removes.forEach((path) => path.remove());
                 }
             },
+            /**
+             * specifiers表示import导入的变量组成的节点数组，source表示导出模块的来源节点。这里再说一下specifier中的imported和local字段，imported表示从导出模块导出的变量，local表示导入后当前模块的变量
+             * @param {*} path
+             */
             ImportDeclaration(path) {
                 let { node } = path,
                     { specifiers, source } = node,
@@ -85,14 +85,13 @@ export default function ({ types: t }) {
                     specifiers.forEach((spec) => {
                         if (t.isImportSpecifier(spec)) {
                             const name = spec.imported.name;
-                            spec.type = 'ImportSpecifier';
 
                             if (methods[name]) {
-                                path.insertBefore(t.importDeclaration([t.clone(spec)], t.stringLiteral(`${value}/dist/${methods[name]}`)));
-                            } else if (name.startsWith('ElIcon')) {
-                                path.insertBefore(t.importDeclaration([t.clone(spec)], t.stringLiteral(`${value}/dist/ElIcon`)));
-                            } else {
-                                path.insertBefore(t.importDeclaration([t.clone(spec)], t.stringLiteral(`${value}/dist/${name}/${name}`)));
+                                if (methods[name].fullImp.includes(' as ')) {
+                                    spec.imported.name = methods[name]._import;
+                                }
+                                path.insertBefore(t.importDeclaration([t.clone(spec)], t.stringLiteral(`${value}/dist/${methods[name].dest}`)));
+                                // path.insertBefore(t.importDeclaration([t.ImportDefaultSpecifier(spec.local)], t.stringLiteral(value + '/dist/' + methods[name].dest)));
                             }
                         }
                     });
