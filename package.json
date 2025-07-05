@@ -1,0 +1,28 @@
+{
+  "name": "@qsxy/babel-plugin-element-plus-react",
+  "version": "1.0.1",
+  "description": "a babel plugin of tree shaking for element-plus-react",
+  "main": "lib/index.js",
+  "author": "Parker",
+  "license": "MIT",
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "build": " babel src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/parker_cn/index-processing.git",
+    "directory": "babel-plugin-platform"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.21",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.3",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-stage-2": "^6.24.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

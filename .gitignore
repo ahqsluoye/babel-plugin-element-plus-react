@@ -1,0 +1,6 @@
+node_modules
+dist
+yarn-error
+todo.js
+test.*
+lib
