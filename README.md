@@ -1,13 +1,25 @@
+## 介绍
+
+搭配@qsxy/element-plus-react，实现按需加载，提升性能，减少打包体积
+
 ### 安装命令：
 
-yarn add @krm/babel-plugin-report-platform --dev
+```bash
+yarn add @qsxy/babel-plugin-element-plus-react --dev
+```
+
 或
-npm i @krm/babel-plugin-report-platform --save-dev
+
+```bash
+npm i @qsxy/babel-plugin-element-plus-react --save-dev
+```
 
 ### 如何使用
 
 然后把下列代码插入到你的 .babelrc 或者 babel.config.js 中
 
+```js
 plugins: [
-['@krm/report-platform'],
+    ['@qsxy/element-plus-react'],
 ],
+```
